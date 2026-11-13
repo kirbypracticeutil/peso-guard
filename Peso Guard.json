@@ -1,0 +1,282 @@
+{
+  "name": "Peso Guard",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        144,
+        144
+      ],
+      "id": "5e06ab81-4241-4791-b26a-816977178b78",
+      "name": "Telegram Trigger",
+      "webhookId": "3fac5ec7-a5eb-4e5c-a7a1-3cf0acc80d1b",
+      "credentials": {
+        "telegramApi": {
+          "id": "CjD8v3pcEZX5wKW5",
+          "name": "Telegram - Peso Guard"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=Logged ₱ {{ $('Basic LLM Chain').item.json.output.amount }} - {{ $('Basic LLM Chain').item.json.output.category }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1136,
+        160
+      ],
+      "id": "cf4c7cd9-5705-4bf9-b53d-f4061ae5b87c",
+      "name": "Send a text message",
+      "webhookId": "6c603451-750b-43b8-95f3-9f359dc33362",
+      "credentials": {
+        "telegramApi": {
+          "id": "CjD8v3pcEZX5wKW5",
+          "name": "Telegram - Peso Guard"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "7aa82e4e-ac2e-4144-abd9-54a813d7af17",
+              "leftValue": "={{ $json.message.chat.id }}",
+              "rightValue": 1075662973,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        368,
+        144
+      ],
+      "id": "fcfa4fe0-9d85-445a-8180-18c05b1e48d1",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You turn a short expense message into JSON.\n\nMessage: {{ $('Telegram Trigger').item.json.message.text }}\n\nReturn ONLY a JSON object, no other text, with these fields:\n- \"amount\": the amount spent as a number. No ₱ sign, no commas. Example: 285\n- \"category\": exactly one of these lowercase words:\n    food            meals, snacks, groceries, drinks\n    transport       grab, fuel, parking, fare\n    socializing     going out with friends, bars, treating people\n    entertainment   movies, games, subscriptions\n    clothing        clothes, shoes\n    other           anything that doesn't fit above\n- \"description\": what it was for, in a few words. Example: \"jollibee\"\n- \"valid\": true if the message describes money spent, false if it doesn't\n  (greetings, questions, random text).\n\nIf \"valid\" is false, set amount to 0, category to \"other\",\nand description to \"\". ",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        592,
+        144
+      ],
+      "id": "607bf5bd-1ce3-4e4b-88e9-77f01a480cf1",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        528,
+        352
+      ],
+      "id": "085f5873-7fdf-4076-99fe-473e6ededabd",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "xoaHFWkYHx7cdORx",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "38cae931-306d-4218-a062-91fd012f7dc7",
+              "leftValue": "={{ $json.output.valid }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        912,
+        144
+      ],
+      "id": "8cc664f9-b2d3-4324-b68e-cfb0de32b0d9",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"amount\": 150,\n  \"category\": \"food\",\n  \"description\": \"jollibee lunch\",\n  \"valid\": true\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        736,
+        352
+      ],
+      "id": "3a4c59a4-4edf-4da3-b9da-aadc3ff18927",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Couldn't log that. Try ex: 150 jollibee lunch",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1184,
+        288
+      ],
+      "id": "d83aea02-ff2d-4c38-8610-612635455d09",
+      "name": "Send a text message1",
+      "webhookId": "4db397a9-a202-4d81-b076-83e5377fb1eb",
+      "credentials": {
+        "telegramApi": {
+          "id": "CjD8v3pcEZX5wKW5",
+          "name": "Telegram - Peso Guard"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b777d929-5c17-4577-b7f1-f0a7d7ffcb8f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ac833c9e9af77d409ee2c3c769c232ede345f97c06d6755e1895b36896741c57"
+  },
+  "nodeGroups": [],
+  "id": "C123fi9dfUP1siKC",
+  "tags": []
+}
